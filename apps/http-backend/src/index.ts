@@ -18,22 +18,23 @@ app.post("/signup",async (req,res) => {
     }
 
     try{
-        await prismaClient.user.create({
+        const user = await prismaClient.user.create({
             data: {
                 email: result.data.username,
                 password: result.data.password,
                 name: result.data.name
             }
         });
+
+        res.json({
+            message: "User Created Successfully!",
+            userId: user.id
+        })
     } catch(e){
         return res.status(411).json({
             message: "User already exists with this username"
         })
     }
-    
-    res.json({
-        message: "User Created Successfully!"
-    })
 })
 
 app.post("/signin",async (req,res) => {
@@ -51,7 +52,9 @@ app.post("/signin",async (req,res) => {
         }
     });
     if(!user){
-        return;
+        return res.status(403).json({
+            message: "Not Authorized!"
+        });
     }
     const userId = user.id;
     const token = jwt.sign({
@@ -63,7 +66,7 @@ app.post("/signin",async (req,res) => {
     })
 })
 
-app.post("/room", middleware ,(req,res) => {
+app.post("/room", middleware ,async (req,res) => {
     const result = CreateRoomSchema.safeParse(req.body)
     if(!result.success){
         return res.json({
@@ -71,16 +74,22 @@ app.post("/room", middleware ,(req,res) => {
         })
     }
 
-    const room = prismaClient.room.create({
-        data: {
-            slug: result.data.name,
-            adminId: req.userId
-        }
-    });
+    try{
+        const room = await prismaClient.room.create({
+            data: {
+                slug: result.data.name,
+                adminId: req.userId
+            }
+        });
 
-    res.json({
-        roomId: 123
-    })
+        res.json({
+            roomId: room.id
+        })
+    } catch(e){
+        return res.status(411).json({
+            message: "Room name already exists!"
+        })
+    }
 })
 
 app.listen(3001);
